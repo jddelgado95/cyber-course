@@ -358,3 +358,17 @@ This is the root of nearly every software vulnerability you will study.
 4. Run a simple program in GDB. Use `info registers` to see all registers. What is `RIP` pointing to? What is at that address (`x/5i $rip`)?
 
 5. Open `/proc/self/maps` (run `cat /proc/self/maps` in your shell). The first column is the address range. How large is the stack region? The heap?
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| Von Neumann architecture, CPU components (CU, ALU, registers) | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Ch. 1 (Fundamentals of Quantitative Design) |
+| Instruction sets, fetch-decode-execute cycle | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Appendix B (Instruction Set Principles) |
+| Memory hierarchy (registers → L1/L2/L3 → RAM) | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Ch. 2 (Memory Hierarchy Design) |
+| Endianness, binary/hex representation | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x100 (Introduction) |
+| Stack and heap at the hardware level (PUSH/POP/CALL/RET) | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x200 (Programming) |
+| Interrupts, exceptions, page faults | *The Linux Programming Interface* — Michael Kerrisk, Ch. 23 (Timers and Sleeping) and Ch. 21 (Signals) |
+| How a CPU works — visual explainers | Ben Eater (YouTube): *Building an 8-bit CPU from scratch*; Crash Course CS episodes 7–9 |

@@ -307,3 +307,16 @@ print(key)   # "esaw h" or whatever the XOR produces
 3. Disassemble `/bin/ls` with `objdump`. Find the `main` function. How many calls does it make in the first 20 instructions?
 4. Use `readelf --syms` on a binary compiled with debug symbols (`gcc -g`). Then strip it (`strip binary`). Run `readelf --syms` again. What changed?
 5. In Ghidra, import a binary and use "Search → For Strings" to find all strings. Navigate to each one's cross-references to find where it's used.
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| ELF format, section/segment headers (`readelf`, `objdump`) | [ELF-64 Object File Format spec](https://uclibc.org/docs/elf-64-gen.pdf) |
+| Static analysis methodology, finding vulnerabilities without running code | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x200 (Programming) |
+| Ghidra usage and reverse engineering workflow | [Ghidra official documentation](https://ghidra-sre.org) |
+| Reading disassembly, identifying patterns (loops, conditionals, calls) | *Practical Reverse Engineering* — Bruce Dang et al., Ch. 1 (x86 and x86-64) |
+| Recognizing vulnerability patterns in disassembly | *The Art of Software Security Assessment* — Dowd, McDonald & Schuh, Ch. 6 (C Language Issues) |
+| Dynamic symbols, PLT/GOT, stripping | *The Linux Programming Interface* — Michael Kerrisk, Ch. 41–42 (Shared Libraries) |

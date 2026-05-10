@@ -344,3 +344,16 @@ pwndbg> x/gx $rbp+8
 3. Set a breakpoint before a `strcmp` call. Use `x/s $rdi` and `x/s $rsi` to read both strings being compared.
 4. Use `strace` on `/bin/ls`. How many `openat` syscalls does it make? What files does it open?
 5. In GDB: break at `main`, use `vmmap` to find the base address of libc. Then use `p system` to find the address of `system`. Calculate the offset of `system` from the libc base.
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| GDB usage: breakpoints, stepping, memory examination | [GDB official documentation](https://www.gnu.org/software/gdb/documentation/) |
+| pwndbg features: `vmmap`, `heap`, `telescope`, `cyclic` | [pwndbg documentation](https://pwndbg.re/pwndbg/) |
+| `strace` and `ltrace` for runtime tracing | *The Linux Programming Interface* — Michael Kerrisk, Ch. 4–5 and Appendix A |
+| Cyclic (de Bruijn) patterns for offset finding | [pwntools documentation — `cyclic`](https://docs.pwntools.com/en/stable/util/cyclic.html) |
+| Dynamic analysis methodology | *Practical Reverse Engineering* — Bruce Dang et al., Ch. 2 (x86 and x86-64 — Dynamic Analysis) |
+| Exploit development workflow in GDB | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x400 (Networking) |

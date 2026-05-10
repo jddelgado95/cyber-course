@@ -463,3 +463,16 @@ Every technique in this course is a variation of:
 3. Set a breakpoint at `say_hello`. Print `$rbp`. Then calculate where the return address is (`x/gx $rbp+8`). Write down that address. Then step through the function and confirm `RET` jumps back there.
 4. Introduce the overflow: change `fgets(input, 64, stdin)` to `gets(input)`. Find the offset to the return address using a cyclic pattern. Write an exploit that redirects to a `win()` function you add to the program.
 5. Add `checksec --file=./program` to your workflow. Enable mitigations one at a time (`-fstack-protector`, then `-pie`) and observe how each changes the exploit.
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| Full C-to-exploitation pipeline (the definitive walkthrough) | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x300 (Exploitation) |
+| Compilation stages (preprocessor → assembler → linker) | `man gcc`; *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Appendix B |
+| ELF loading, dynamic linker, GOT/PLT resolution | *The Linux Programming Interface* — Michael Kerrisk, Ch. 41–42 (Shared Libraries) |
+| Stack frame construction, calling convention | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Appendix B (Instruction Set Principles) |
+| pwntools exploit scripting | [pwntools documentation](https://docs.pwntools.com) |
+| GDB usage for exploit development | [pwndbg documentation](https://pwndbg.re/pwndbg/) |

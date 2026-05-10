@@ -336,3 +336,16 @@ ld -o hello hello.o
 2. Open a binary in GDB. Set a breakpoint at `main`. Step through with `si` (step instruction). After each instruction, note what changed in the registers (`info registers`).
 3. In Ghidra, find a function that contains a loop. Identify the `cmp`/`jmp` pair that controls it.
 4. Identify the calling convention in action: set a breakpoint just before a `call` in GDB and confirm the arguments in `RDI`, `RSI`, `RDX`.
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| x86-64 registers, instruction encoding, addressing modes | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Appendix B (Instruction Set Principles) |
+| x86-64 instruction reference (authoritative) | [Intel 64 and IA-32 Architectures Software Developer's Manual](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html), Vol. 2 |
+| System V AMD64 ABI (calling convention) | [System V Application Binary Interface — AMD64 Architecture Processor Supplement](https://gitlab.com/x86-psABIs/x86-64-ABI) |
+| Linux syscall table (x86-64) | [syscall.sh](https://syscall.sh) or `/usr/include/asm/unistd_64.h` |
+| Assembly for exploitation (shellcode, stack frames) | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x200 (Programming) |
+| Reading disassembly, flags, common patterns | *Programming from the Ground Up* — Jonathan Bartlett (free PDF, x86 focused) |

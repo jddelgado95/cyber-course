@@ -374,3 +374,16 @@ $ checksec --file=./binary
 3. Compile a program with and without PIE (`-no-pie`). Compare the load addresses in GDB with `info proc mappings`.
 4. Use `checksec` on five different binaries on your system (`/bin/ls`, `/bin/cat`, etc.). Note which have all mitigations enabled.
 5. In GDB, set a breakpoint at `main` and print the canary value: `x/gx $rbp-0x8` (adjust offset if needed). Run the program twice — does the canary change?
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| Memory hierarchy (registers, caches, RAM) | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Ch. 2 (Memory Hierarchy Design) |
+| Virtual memory, page tables, MMU | *The Linux Programming Interface* — Michael Kerrisk, Ch. 49 (Memory Mappings) |
+| Process address space layout (`/proc/pid/maps`) | *The Linux Programming Interface* — Ch. 6 (Processes) |
+| Stack frames, calling conventions | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Appendix B (Instruction Set Principles) |
+| Heap internals (ptmalloc, tcache) | [glibc malloc source](https://sourceware.org/git/?p=glibc.git;a=blob;f=malloc/malloc.c) |
+| ASLR, stack canaries, NX, PIE | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 3 (Exploitation) |

@@ -343,3 +343,17 @@ add:
 3. Compile a program with `gets()`. Use `checksec` and `gdb` to find the exact byte offset from the start of the buffer to the return address.
 4. Write a program that demonstrates the format string bug: take user input and pass it directly to `printf`. Try inputs like `%x`, `%x.%x.%x.%x`, and `%s`.
 5. Read: `man 3 gets`, `man 3 strcpy`, `man 3 printf`, `man 3 malloc`.
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| C memory model, pointers, stack vs heap | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x200 (Programming) |
+| `gets`, `strcpy`, `sprintf` and unsafe patterns | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x300 (Exploitation) |
+| Stack frame layout, buffer overflow mechanics | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy, Appendix B (Instruction Set Principles) |
+| Process memory layout (.text, .data, .bss, heap, stack) | *The Linux Programming Interface* — Michael Kerrisk, Ch. 6 (Processes) |
+| Format string vulnerabilities (`%n`, arbitrary write) | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x350 (Format Strings) |
+| `malloc`/`free` internals | *The Linux Programming Interface* — Michael Kerrisk, Ch. 7 (Memory Allocation) |
+| C language reference | *The C Programming Language* — Brian W. Kernighan & Dennis M. Ritchie (K&R), 2nd ed. |

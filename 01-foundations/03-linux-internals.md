@@ -276,3 +276,18 @@ cat /proc/<pid>/environ   # environment variables
 3. Find all SUID binaries on your system. Look up each one — is any of them known to be exploitable?
 4. Compile a simple C program and run `readelf -S` on it. Find the `.text`, `.data`, `.bss`, `.plt`, and `.got` sections.
 5. Use `ldd` to find the path to `libc`. Use `nm -D` to find the offset of `system` inside it.
+
+---
+
+## References
+
+| Topic | Source |
+|---|---|
+| Processes, virtual memory, `/proc` filesystem | *The Linux Programming Interface* — Michael Kerrisk, Ch. 6 (Processes) and Ch. 49 (Memory Mappings) |
+| File descriptors, `open`/`read`/`write` syscalls | *The Linux Programming Interface* — Michael Kerrisk, Ch. 4–5 (File I/O) |
+| Signals (`SIGSEGV`, `SIGKILL`, etc.) | *The Linux Programming Interface* — Michael Kerrisk, Ch. 20–22 (Signals) |
+| ELF format (header, sections, segments) | [ELF-64 Object File Format spec](https://uclibc.org/docs/elf-64-gen.pdf) |
+| PLT/GOT and dynamic linking | *Hacking: The Art of Exploitation* — Jon Erickson, Ch. 0x400 (Networking) |
+| Linux syscalls (numbers, ABI) | [Linux man-pages: `man 2 syscall`](https://man7.org/linux/man-pages/man2/syscall.2.html) |
+| SUID, UIDs, permissions model | *The Linux Programming Interface* — Michael Kerrisk, Ch. 9 (Process Credentials) |
+| Kernel internals (scheduler, memory management) | *Linux Kernel Development* — Robert Love, 3rd ed. |
