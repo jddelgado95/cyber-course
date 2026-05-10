@@ -319,6 +319,20 @@ checksec --file=./binary
 
 Without PIE, code addresses in the binary are always the same — easier to exploit. With PIE, you need to leak an address first to defeat it.
 
+#### What this means in practice
+
+Without PIE, every time you run the binary it is loaded at the same fixed address — for example `0x400000`. That means the address of every function, every ROP gadget, every string is completely predictable. An attacker can hardcode those addresses into an exploit and it will work every run.
+
+With PIE enabled, the OS loads the binary at a **random base address** on every run. The code is compiled to use *relative* addresses — offsets from its current position — rather than hardcoded absolute ones. That is what "position independent" means: the binary works correctly regardless of where in memory it lands.
+
+```
+Without PIE (same every run):      With PIE (random every run):
+  main() always at 0x401156          main() at 0x555555555156 (run 1)
+  win()  always at 0x401136          win()  at 0x7f3a12340136 (run 2)
+```
+
+To exploit a PIE binary, an attacker must first **leak** a runtime address from the binary, subtract the known offset of that symbol to recover the random base, then calculate all other addresses from the base. This is why info leaks (format strings, out-of-bounds reads) are so valuable.
+
 ---
 
 ## Stack Canary
@@ -342,6 +356,22 @@ checksec --file=./binary
 # Canary found: has stack canary
 # No canary found: no protection
 ```
+
+#### How it works
+
+The name comes from "canary in a coal mine" — miners would bring a canary underground; if the canary died, it warned of invisible danger. The stack canary serves the same purpose: it sits between the buffer and the return address, and if anything killed it (i.e., overwrote it), the program raises the alarm.
+
+When a protected function is entered, the compiler inserts code to read a secret random value from a thread-local variable (`__stack_chk_guard`) and write it onto the stack just above the local variables. When the function is about to return, the compiler inserts code to read the canary back from the stack and compare it to `__stack_chk_guard`. If they don't match, the program immediately calls `__stack_chk_fail()` and aborts — before the corrupted return address is ever used.
+
+```
+Normal return:              After overflow:
+  canary == guard  ✓          canary != guard  ✗
+  → function returns          → __stack_chk_fail() → abort
+```
+
+The canary is generated once when the program starts and is different on every run, so an attacker cannot simply hardcode it.
+
+**Limitation:** the canary only protects against overflows that *march straight through it*. If an attacker can read the canary value first — for example via a format string vulnerability — they can include the correct canary in their overflow payload and the check passes.
 
 ---
 

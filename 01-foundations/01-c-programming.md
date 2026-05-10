@@ -13,6 +13,22 @@ C is the language of the operating system, compilers, and virtually every exploi
 
 ---
 
+## What Is a Buffer?
+
+A **buffer** is a fixed-size region of memory reserved to temporarily hold data. When you write:
+
+```c
+char buf[32];
+```
+
+you are telling the compiler: *"reserve exactly 32 bytes on the stack for me."* Think of it like a labeled box with a fixed capacity. The box has exactly 32 slots — no more.
+
+The problem in C is that the language does not automatically stop you from putting more than 32 bytes into that box. Functions like `strcpy`, `gets`, and `scanf` will happily keep writing past the end of the box into whatever memory comes next — which on the stack is the saved base pointer and the return address.
+
+That is what a **buffer overflow** is: writing more data into a buffer than it was sized to hold.
+
+---
+
 ## Memory Layout of a Process
 
 When a program runs, the OS gives it a virtual address space divided into regions:
@@ -365,6 +381,37 @@ add:
     pop    rbp
     ret
 ```
+
+#### Line-by-line explanation
+
+**`push rbp`**
+Save the caller's base pointer onto the stack before we overwrite RBP with our own. Every function starts by doing this so the caller's frame can be restored later.
+
+**`mov rbp, rsp`**
+Set our base pointer to the current stack pointer. RBP is now the fixed anchor for this function's stack frame. All local variables will be addressed as offsets from RBP (e.g., `[rbp-0x4]`).
+
+**`mov DWORD PTR [rbp-0x4], edi`**
+By the x86-64 calling convention, the first argument (`a`) arrives in the EDI register. This instruction stores it into a local slot on the stack at `[rbp-4]`. `DWORD PTR` means "4 bytes" — the size of an `int`. The compiler allocated space for `a` on the stack even though it started in a register (because optimization is off: `-O0`).
+
+**`mov DWORD PTR [rbp-0x8], esi`**
+Same thing for the second argument (`b`), which arrived in ESI. Stored at `[rbp-8]`.
+
+**`mov edx, DWORD PTR [rbp-0x4]`**
+Load `a` back from the stack into EDX.
+
+**`mov eax, DWORD PTR [rbp-0x8]`**
+Load `b` back from the stack into EAX.
+
+**`add eax, edx`**
+Add them together. The result (`a + b`) is now in EAX. On x86-64, the return value of a function is always placed in RAX (or EAX for 32-bit results). So this is both the addition and the return value preparation in one instruction.
+
+**`pop rbp`**
+Restore the caller's base pointer from the stack — undoing the `push rbp` at the start.
+
+**`ret`**
+Return to the caller. The CPU pops the return address from the stack into RIP. EAX still holds `a + b`, which is the result the caller will read.
+
+> **Why so many stack instructions for a simple add?** Because `-O0` disables all optimizations. A real compiler with `-O2` would skip the stack entirely and produce just `lea eax, [rdi+rsi]` or `mov eax, edi; add eax, esi`. The verbose version is useful for learning because every step is explicit.
 
 ---
 
