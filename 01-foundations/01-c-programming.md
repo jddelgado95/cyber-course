@@ -97,6 +97,38 @@ After overflow with 48 bytes of 'A':
 +---------------------------+
 ```
 
+#### Understanding the layout
+
+When `vulnerable()` is called, the CPU builds a workspace on the stack for that function. The stack grows **downward** in memory, so lower addresses are at the bottom of the diagram. The workspace is laid out from bottom to top:
+
+- **`buf[32]`** — a fixed-size box of 32 bytes. The function declared it, so the CPU reserved exactly 32 bytes for it.
+- **saved RBP** (8 bytes) — before entering this function, the CPU saved the previous frame's base pointer here. It is bookkeeping so the caller can restore itself when this function returns.
+- **return address** (8 bytes) — the address of the instruction in the caller that should run *after* `vulnerable()` finishes. The CPU reads this when it hits `RET`.
+
+Total distance from the start of `buf` to the end of the return address: **32 + 8 + 8 = 48 bytes**.
+
+#### What `strcpy` does
+
+`strcpy(buf, input)` copies every byte from `input` into `buf`, starting at `buf[0]`, until it hits a null byte (`\0`). It does **not** check whether `input` is longer than `buf`. It just writes. If `input` is 48 bytes, it writes 48 bytes — straight through `buf`, through saved RBP, and into the return address.
+
+#### The overflow, byte by byte
+
+The attacker sends 48 `'A'` characters. In ASCII, `'A'` = `0x41`.
+
+```
+Bytes  0–31  → fill buf exactly          → buf is now "AAAA...AAAA"
+Bytes 32–39  → spill into saved RBP      → saved RBP  is now 0x4141414141414141
+Bytes 40–47  → spill into return address → return address is now 0x4141414141414141
+```
+
+#### What happens when the function returns
+
+The function hits `RET`. That instruction says: *read whatever is at the top of the stack and jump there.* It reads `0x4141414141414141` as the next address to execute. The CPU tries to fetch an instruction from that address — which is not mapped in memory — and crashes with a **Segmentation Fault**.
+
+But if instead of `'A'` bytes the attacker puts a **real address** in those last 8 bytes — say, the address of a `win()` function or a shell — the CPU jumps there instead. That is code execution.
+
+> **One-line summary:** `buf` has 32 bytes of space. `strcpy` does not know that. Writing 48 bytes marches right through saved RBP and overwrites the return address. When the function returns, the CPU blindly jumps to whatever is written there.
+
 ---
 
 ## Unsafe Functions — Full Explanation
