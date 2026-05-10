@@ -110,6 +110,7 @@ sudo apt install qemu-system-x86
 | [ir0nstone gitbook](https://ir0nstone.gitbook.io/notes) | Binary exploitation notes |
 | [lkmidas blog](https://lkmidas.github.io) | Kernel exploitation intro series |
 | [LiveOverflow (YouTube)](https://youtube.com/@LiveOverflow) | Excellent video walkthroughs |
+| [Branch Education — "How do CPUs Work?"](https://youtube.com/@BranchEducation) | 3D animated deep dive into CPU hardware and silicon |
 | *Hacking: The Art of Exploitation* — Jon Erickson | Book: C, shellcode, exploitation from scratch |
 | *The Linux Programming Interface* — Michael Kerrisk | Book: definitive Linux internals reference |
 | *Computer Architecture: A Quantitative Approach* — Patterson & Hennessy | Book: deep dive into CPU design, pipelines, memory hierarchy, and instruction sets |
