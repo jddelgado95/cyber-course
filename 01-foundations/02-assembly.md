@@ -264,6 +264,16 @@ jmp  .loop_start
 .loop_end:
 ```
 
+#### What is `add DWORD PTR [rbp - 4], 1`?
+
+This is the assembly for `i++`. Break it into parts:
+
+- **`[rbp - 4]`** — a memory address: the slot on the stack 4 bytes below RBP, where the local variable `i` lives.
+- **`DWORD PTR`** — "Double Word Pointer" — tells the CPU to treat that address as 4 bytes (the size of an `int`). DWORD = 32 bits = 4 bytes.
+- **`add ... 1`** — add 1 directly to the value at that memory address.
+
+This single instruction does three things: reads the integer at `[rbp-4]`, adds 1, and writes it back to the same location. x86 can operate directly on memory — you do not always need to load a value into a register first.
+
 ### Array Access
 
 ```c
@@ -277,28 +287,129 @@ cdqe                            ; sign-extend eax to rax
 mov  DWORD PTR [rbp + rax*4 - 0x18], 99   ; arr[i] = 99
 ```
 
+#### Why `rbp - 0x18`?
+
+The compiler laid out the local variables on the stack frame like this:
+
+```
+[rbp - 0x04]  i        (4 bytes — a single int)
+[rbp - 0x08]  arr[4]   (4 bytes)
+[rbp - 0x0c]  arr[3]   (4 bytes)
+[rbp - 0x10]  arr[2]   (4 bytes)
+[rbp - 0x14]  arr[1]   (4 bytes)
+[rbp - 0x18]  arr[0]   (4 bytes)  ← start of the array
+```
+
+`i` takes 4 bytes at the top. Then the 5 elements of `arr` occupy the next 20 bytes going down. The first element `arr[0]` lands at `rbp - 4 - 20 = rbp - 24 = rbp - 0x18`.
+
+So `rbp - 0x18` is just the address of `arr[0]`.
+
+#### Line-by-line explanation
+
+**`mov eax, [rbp - 0x4]`**
+Load `i` from the stack into EAX (32-bit).
+
+**`cdqe`**
+"Convert Doubleword to Quadword Extended." Sign-extends EAX (32-bit) into the full RAX (64-bit). This is necessary because memory addresses are 64 bits. If `i` is negative, this preserves the sign correctly — without it, `-1` in EAX would become `0x00000000FFFFFFFF` in RAX instead of `0xFFFFFFFFFFFFFFFF`, producing a completely wrong address.
+
+**`mov DWORD PTR [rbp + rax*4 - 0x18], 99`**
+Write 99 to `arr[i]`. The address is computed as:
+
+```
+rbp - 0x18        = address of arr[0]
+rax * 4           = i × 4  (each int is 4 bytes, so element i is i×4 bytes past arr[0])
+rbp + rax*4 - 0x18 = address of arr[i]
+```
+
+Verification:
+```
+i=0 → rbp + 0  - 0x18 = rbp - 0x18  = arr[0]  ✓
+i=1 → rbp + 4  - 0x18 = rbp - 0x14  = arr[1]  ✓
+i=4 → rbp + 16 - 0x18 = rbp - 0x08  = arr[4]  ✓
+```
+
+The CPU supports `base + index * scale + displacement` in a single memory operand — hardware built specifically for array indexing. The `scale` (here 4) matches the element size so you never manually multiply.
+
 ---
 
 ## Linux Syscalls
 
-The kernel exposes services through syscall numbers. Arguments go in registers.
+### What is a syscall?
+
+Your program runs in **userspace** (Ring 3) — a restricted environment where it cannot directly touch hardware, access other processes' memory, or talk to the kernel. When your program needs to do something privileged — read a file, write to the terminal, allocate memory, spawn a process — it has to **ask the kernel** to do it on its behalf.
+
+A **syscall** (system call) is the formal mechanism for making that request. It works like this:
 
 ```
-Syscall number: RAX
-Arguments:      RDI, RSI, RDX, R10, R8, R9
-Return value:   RAX
+Your program (Ring 3)
+  │
+  │  1. Load syscall number into RAX
+  │  2. Load arguments into RDI, RSI, RDX, R10, R8, R9
+  │  3. Execute the "syscall" instruction
+  │
+  ▼
+CPU switches to Ring 0 (kernel mode)
+  │
+  │  4. Kernel reads RAX, identifies which service you want
+  │  5. Kernel reads the arguments from registers
+  │  6. Kernel performs the operation (reads file, writes bytes, etc.)
+  │  7. Kernel places return value in RAX
+  │
+  ▼
+CPU returns to Ring 3 (your program continues)
+  │
+  │  8. Your program reads RAX to see if it succeeded
 ```
+
+The `syscall` instruction is the actual trigger — it atomically switches privilege level and jumps into the kernel's entry point. When the kernel is done, it uses `sysret` to hand control back.
+
+### The calling convention for syscalls
+
+Each syscall is identified by a number in RAX. Arguments go into specific registers in order:
+
+```
+RAX = syscall number      (which operation to perform)
+RDI = argument 1
+RSI = argument 2
+RDX = argument 3
+R10 = argument 4
+R8  = argument 5
+R9  = argument 6
+
+Return value → RAX        (negative value = error code)
+```
+
+Note: syscall arguments use **R10** instead of RCX for the 4th argument (unlike the normal function calling convention which uses RCX). This is because the `syscall` instruction itself uses RCX internally.
 
 ### Common Syscalls
 
-| RAX | Name | RDI | RSI | RDX |
-|---|---|---|---|---|
-| 0 | read | fd | buf | count |
-| 1 | write | fd | buf | count |
-| 2 | open | filename | flags | mode |
-| 3 | close | fd | | |
-| 59 | execve | filename | argv | envp |
-| 60 | exit | status | | |
+| RAX | Name | RDI | RSI | RDX | What it does |
+|---|---|---|---|---|---|
+| 0 | `read` | fd | buf | count | Read bytes from a file descriptor into buf |
+| 1 | `write` | fd | buf | count | Write bytes from buf to a file descriptor |
+| 2 | `open` | filename | flags | mode | Open a file, returns a file descriptor |
+| 3 | `close` | fd | | | Close a file descriptor |
+| 9 | `mmap` | addr | length | prot | Map memory (used by malloc internally) |
+| 11 | `munmap` | addr | length | | Unmap memory |
+| 59 | `execve` | filename | argv | envp | Replace current process with a new program |
+| 60 | `exit` | status | | | Terminate the process |
+
+**File descriptors (fd):** Every open file, socket, or pipe is represented as a small integer. Three are always open: `0` = stdin, `1` = stdout, `2` = stderr. When you `open()` a file, the kernel returns the next available fd (3, 4, 5...).
+
+**`execve` — why it matters for exploitation:** `execve("/bin/sh", NULL, NULL)` replaces the current process with a shell. This is the goal of most shellcode — make the kernel run `/bin/sh` with your privileges.
+
+### Syscalls vs library functions
+
+You almost never call syscalls directly in C — you use library functions that wrap them:
+
+```
+printf("hello")      →  calls write(1, "hello", 5)        →  syscall 1
+fopen("file", "r")   →  calls open("file", O_RDONLY, 0)   →  syscall 2
+malloc(100)          →  calls mmap() or brk()             →  syscall 9 or 12
+exit(0)              →  calls exit_group(0)               →  syscall 231
+```
+
+`strace` shows you the real syscalls underneath any C program.
 
 ### Write "Hello" to stdout
 
@@ -310,15 +421,15 @@ section .data
 section .text
     global _start
 _start:
-    mov rax, 1          ; syscall: write
-    mov rdi, 1          ; fd: stdout
-    lea rsi, [rel msg]  ; buffer
-    mov rdx, len        ; length
-    syscall
+    mov rax, 1          ; syscall number 1 = write
+    mov rdi, 1          ; fd 1 = stdout
+    lea rsi, [rel msg]  ; RSI = pointer to the string
+    mov rdx, len        ; RDX = number of bytes to write
+    syscall             ; → kernel writes "Hello, World!\n" to terminal
 
-    mov rax, 60         ; syscall: exit
-    xor rdi, rdi        ; status: 0
-    syscall
+    mov rax, 60         ; syscall number 60 = exit
+    xor rdi, rdi        ; exit status 0 (xor reg,reg is a fast way to zero it)
+    syscall             ; → kernel terminates the process
 ```
 
 ```bash
@@ -327,6 +438,17 @@ nasm -f elf64 -o hello.o hello.asm
 ld -o hello hello.o
 ./hello
 ```
+
+#### What happens step by step
+
+1. `mov rax, 1` — tell the kernel we want `write`
+2. `mov rdi, 1` — write to stdout (fd 1)
+3. `lea rsi, [rel msg]` — point RSI at the start of the string in memory
+4. `mov rdx, len` — tell the kernel how many bytes to write
+5. `syscall` — CPU switches to Ring 0; kernel writes the bytes; returns number of bytes written in RAX
+6. `mov rax, 60` — tell the kernel we want `exit`
+7. `xor rdi, rdi` — set exit code to 0 (success)
+8. `syscall` — process terminates
 
 ---
 
