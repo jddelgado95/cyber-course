@@ -270,13 +270,106 @@ This is why Full RELRO exists: it makes the GOT read-only after startup, prevent
 
 ## Dynamic Linking
 
-```bash
-ldd ./binary                   # list shared libraries a binary depends on
-ldd ./binary | grep libc       # find libc path
+### What is dynamic linking?
 
-# Find function offsets in libc
+When you compile a C program that calls `printf`, the compiler does not copy `printf`'s code into your binary. Instead it records a dependency: "this program needs `libc.so`." At runtime, the OS loads `libc.so` into the process's address space alongside your binary and connects them together. This is dynamic linking.
+
+The alternative — **static linking** — copies all library code directly into the binary at compile time. The result is a larger, self-contained binary that does not depend on anything external.
+
+```
+Dynamic binary:             Static binary:
+  your_code                   your_code
+  + reference to libc  →      + printf's actual code copied in
+                              + strlen's actual code copied in
+                              + ... (everything you use)
+
+  small file, needs libc.so   large file, runs anywhere
+```
+
+For exploitation, dynamic binaries are more interesting because the GOT/PLT mechanism is present and functions like `system()` are already in the loaded libc — you just need to find their address.
+
+### ldd — list shared library dependencies
+
+`ldd` shows which shared libraries a binary needs and where they are loaded.
+
+```bash
+ldd ./binary
+```
+
+Example output:
+```
+linux-vdso.so.1 (0x00007ffce8bfe000)       ← virtual syscall helper (kernel-injected)
+libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f3a42100000)
+/lib64/ld-linux-x86-64.so.2 (0x00007f3a42300000)
+```
+
+- **libc.so.6** — the C standard library. Contains `printf`, `malloc`, `system`, `/bin/sh`, etc.
+- **ld-linux-x86-64.so.2** — the dynamic linker itself. It is the first thing that runs when you execute a dynamic binary — it loads libc and patches the GOT before your `main()` starts.
+- **linux-vdso.so.1** — a virtual library injected by the kernel. It provides fast syscall wrappers (`gettimeofday`, `clock_gettime`) without the overhead of a real kernel call. It has no file on disk.
+
+```bash
+ldd ./binary | grep libc       # find the exact path to libc on this system
+```
+
+Run `ldd` twice on the same binary with ASLR enabled — the addresses change each run, confirming ASLR is active.
+
+### Finding function offsets inside libc
+
+For exploitation you need two things: the runtime base address of libc (from a leak), and the fixed offset of a function within libc (from static analysis). Adding them gives the runtime address of any function.
+
+```
+runtime address = libc_base + function_offset
+```
+
+The offset is constant for a given libc version — it never changes between runs.
+
+```bash
+# Method 1: nm — symbol table
 nm -D /lib/x86_64-linux-gnu/libc.so.6 | grep " puts"
+# 0000000000080e50 T puts
+#                  ^ offset of puts from libc base
+
+# Method 2: readelf — also shows symbol table
 readelf -s /lib/x86_64-linux-gnu/libc.so.6 | grep printf
+# 55040: 000000000005bc60   195 FUNC  GLOBAL DEFAULT  16 printf@@GLIBC_2.2.5
+#                ^offset
+
+# Method 3: pwntools (in exploit script)
+from pwn import *
+libc = ELF('/lib/x86_64-linux-gnu/libc.so.6')
+print(hex(libc.symbols['system']))          # offset of system()
+print(hex(next(libc.search(b'/bin/sh'))))   # offset of "/bin/sh" string
+```
+
+### Finding libc base at runtime (in GDB)
+
+```bash
+gdb ./binary
+(gdb) break main
+(gdb) run
+(gdb) vmmap                        # pwndbg: shows all mapped regions
+# or
+(gdb) info proc mappings           # standard GDB
+
+# Example output:
+# 0x7ffff7a00000  0x7ffff7bc0000  libc.so.6   ← base address = 0x7ffff7a00000
+
+# Confirm: base + offset = real address
+(gdb) p system                     # print address of system
+# $1 = 0x7ffff7a50000              ← should equal libc_base + system_offset
+```
+
+### Why this matters for exploitation
+
+If you can leak any runtime pointer that belongs to libc — via a format string, GOT read, or any out-of-bounds read — you can calculate the libc base and from there find `system()`, `execve()`, the string `"/bin/sh"`, and every other useful function.
+
+```python
+# Exploit script pattern
+leaked_puts = <value read from GOT at runtime>
+libc_base   = leaked_puts - libc.symbols['puts']   # libc_base is now known
+
+system_addr = libc_base + libc.symbols['system']
+bin_sh_addr = libc_base + next(libc.search(b'/bin/sh'))
 ```
 
 ---
