@@ -192,20 +192,79 @@ objdump -d ./binary            # disassemble .text
 
 ### PLT and GOT (Lazy Binding)
 
-When a binary calls `printf`, it doesn't know at compile time where `printf` lives in `libc`. The PLT/GOT mechanism resolves this at runtime.
+#### The problem
+
+When you compile a program that calls `printf`, the compiler does not know where `printf` will be in memory at runtime. `printf` lives inside `libc.so`, a shared library that can be loaded at a different address on every run (ASLR). The address is only known at runtime — not at compile time.
+
+Two data structures work together to solve this.
+
+#### GOT — Global Offset Table
+
+A table of **addresses** stored in a writable section of the binary (`.got.plt`). There is one entry per external function the binary uses. Think of it as a phone book that starts out empty and gets filled in as calls are made.
+
+#### PLT — Procedure Linkage Table
+
+A table of small **code stubs** stored in an executable section (`.plt`). There is one stub per external function. Each stub does one thing: jump to whatever address is currently in the matching GOT entry.
+
+```
+.plt (executable, code)        .got.plt (writable, data)
++----------------------+        +---------------------+
+|  printf@plt:         |        |  printf@got:        |
+|    jmp [printf@got]  | -----> |  <address>          |
++----------------------+        +---------------------+
+```
+
+#### First call — lazy resolution
+
+On the very first call to `printf`, the GOT entry has not been filled in yet. It points back into the PLT resolver instead.
+
+```
+Step 1:  call printf
+           │
+           ▼
+Step 2:  printf@plt  (PLT stub)
+           │  jmp [printf@got]
+           │  GOT entry currently = address of PLT resolver
+           ▼
+Step 3:  PLT resolver
+           │  pushes printf's index onto the stack
+           │  calls the dynamic linker (ld-linux.so)
+           ▼
+Step 4:  Dynamic linker
+           │  searches libc for the real printf address
+           │  writes that address into printf@got  ← GOT is now patched
+           ▼
+Step 5:  Jumps to the real printf in libc
+```
+
+#### Subsequent calls — direct jump
+
+The GOT entry now holds the real address. The PLT stub jumps straight there — the dynamic linker is never involved again.
 
 ```
 call printf
-    |
-    v
-printf@plt:           <- PLT stub
-    jmp [printf@got]  <- GOT entry (address written by dynamic linker)
+    │
+    ▼
+printf@plt
+    │  jmp [printf@got]
+    │  GOT entry = real printf in libc  ✓
+    ▼
+printf() in libc  (direct, no linker overhead)
 ```
 
-- First call: GOT points back into PLT, which calls the dynamic linker to resolve the address, then patches the GOT entry.
-- Subsequent calls: GOT entry now holds the real `printf` address in libc.
+#### Why this matters for exploitation
 
-This is important for exploits: overwriting a GOT entry redirects all future calls to that function.
+The GOT is a **writable** section in memory (at least with Partial RELRO). If an attacker can write an arbitrary value to a GOT entry, they redirect every future call to that function to an address of their choosing.
+
+```
+Normal:    got['printf'] = 0x7f...  (real printf in libc)
+           → printf("hello") prints "hello"
+
+Exploited: got['printf'] = system()
+           → printf("/bin/sh") calls system("/bin/sh") → shell
+```
+
+This is why Full RELRO exists: it makes the GOT read-only after startup, preventing this class of attack.
 
 ---
 
