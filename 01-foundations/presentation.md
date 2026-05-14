@@ -51,6 +51,10 @@ This module builds the complete mental model you need before touching an exploit
 
 ---
 
+![bg contain](cearchmeme.jpeg)
+
+---
+
 ## What Is a Computer?
 
 ```
@@ -211,6 +215,10 @@ p64(0x401126)   # b'\x26\x11\x40\x00\x00\x00\x00\x00'
 
 ---
 
+![bg contain](cmeme1.jpeg)
+
+---
+
 ## What Is a Buffer?
 
 ```c
@@ -353,6 +361,10 @@ objdump -d -M intel program
 
 > You don't need to write complex programs in assembly.
 > You **must** be able to read it fluently.
+
+---
+
+![bg contain](assembly.jpeg)
 
 ---
 
@@ -510,6 +522,10 @@ syscall             ; CPU switches to Ring 0, kernel writes
 <!-- SECTION BREAK -->
 # Part 4
 ## Linux Internals
+
+---
+
+![bg contain](linuxmeme.jpeg)
 
 ---
 
@@ -824,6 +840,14 @@ gcc -S program.c -o program.s    # stop after compiler (see assembly)
 gcc -c program.c -o program.o    # stop after assembler
 gcc program.c -o program         # all four stages at once
 ```
+
+---
+
+![bg contain](compilermeme1.jpeg)
+
+---
+
+![bg contain](compilermeme2.jpeg)
 
 ---
 
