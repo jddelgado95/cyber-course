@@ -208,6 +208,108 @@ G                             -> go to specific address
 Ctrl+F                        -> search for string/bytes
 ```
 
+### Headless Mode (Terminal)
+
+Ghidra ships with `analyzeHeadless`, a CLI tool that runs analysis and scripts without opening the GUI.
+It lives in `$GHIDRA_HOME/support/analyzeHeadless`.
+
+**Basic syntax:**
+
+```bash
+$GHIDRA_HOME/support/analyzeHeadless <project_dir> <project_name> \
+    -import <binary> \
+    [options]
+```
+
+**Import and analyze a binary (no script):**
+
+```bash
+# Creates ~/ghidra_projects/demo/, imports and auto-analyzes ./target
+$GHIDRA_HOME/support/analyzeHeadless ~/ghidra_projects demo \
+    -import ./target
+```
+
+**Dump decompiler output for every function:**
+
+Ghidra's headless runner can execute Java or Python scripts after analysis.
+Save this as `DecompileAll.py` anywhere on disk:
+
+```python
+# DecompileAll.py  — run with analyzeHeadless -postScript
+from ghidra.app.decompiler import DecompInterface
+from ghidra.util.task import ConsoleTaskMonitor
+
+decompiler = DecompInterface()
+decompiler.openProgram(currentProgram)
+monitor = ConsoleTaskMonitor()
+
+for func in currentProgram.getFunctionManager().getFunctions(True):
+    result = decompiler.decompileFunction(func, 30, monitor)
+    if result and result.decompileCompleted():
+        print("=== {} ===".format(func.getName()))
+        print(result.getDecompiledFunction().getC())
+```
+
+Then run it:
+
+```bash
+$GHIDRA_HOME/support/analyzeHeadless ~/ghidra_projects demo \
+    -process target \
+    -postScript DecompileAll.py \
+    2>/dev/null          # suppress Ghidra's own log noise
+```
+
+**List all function names and addresses:**
+
+```bash
+# Built-in script — prints every function entry point
+$GHIDRA_HOME/support/analyzeHeadless ~/ghidra_projects demo \
+    -process target \
+    -postScript PrintFunctionNames.java \
+    2>/dev/null
+```
+
+`PrintFunctionNames.java` ships with Ghidra in `$GHIDRA_HOME/Ghidra/Features/Base/ghidra_scripts/`.
+
+**Find dangerous function calls from the terminal (no Ghidra needed):**
+
+For quick hunting you rarely need Ghidra's headless mode — `objdump` + `grep` is faster:
+
+```bash
+objdump -d -M intel ./target | grep -E "call.*(gets|strcpy|sprintf|system)"
+```
+
+Use headless mode when you need the decompiler's C output or want to run cross-reference analysis that `objdump` cannot do.
+
+**Useful headless flags:**
+
+| Flag | Effect |
+|---|---|
+| `-import <file>` | Import and analyze a new binary |
+| `-process <name>` | Re-process a binary already in the project |
+| `-postScript <script>` | Run a script after analysis |
+| `-scriptPath <dir>` | Directory Ghidra searches for scripts |
+| `-noanalysis` | Skip auto-analysis (import only) |
+| `-deleteProject` | Delete the project directory when done |
+| `-log /dev/null` | Suppress the log file |
+
+**Typical CTF workflow from the terminal:**
+
+```bash
+# 1. One-shot: analyze + dump decompiled main
+$GHIDRA_HOME/support/analyzeHeadless /tmp ghidra_tmp \
+    -import ./crackme \
+    -postScript DecompileAll.py \
+    -deleteProject 2>/dev/null | grep -A 40 "=== main ==="
+
+# 2. Search for interesting strings already visible in the binary
+strings ./crackme | grep -iE "flag|pass|key|secret|correct"
+
+# 3. Cross-reference who calls a function (needs the decompiler script)
+# Faster alternative: objdump + grep
+objdump -d -M intel ./crackme | grep -B5 "call.*check_password"
+```
+
 ---
 
 ## Step 6: Finding Vulnerabilities Statically
