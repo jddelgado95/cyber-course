@@ -8,6 +8,7 @@ Four crackmes that cover static and dynamic analysis, in order of difficulty.
 | 02 | XOR Crackme | Static — Ghidra / `objdump` + Python | Easy–Mid |
 | 03 | Runtime Token | Dynamic — GDB | Mid |
 | 04 | Serial Validator | Static + Dynamic | Mid |
+| 05 | ltrace Interception | Dynamic — `ltrace` | Mid |
 
 Work through them in order. Each exercise introduces a tool or concept used in the next.
 
@@ -17,7 +18,7 @@ Work through them in order. Each exercise introduces a tool or concept used in t
 
 Kali Linux (VM or bare metal). All tools are pre-installed.
 
-**Required:** `gcc`, `gdb`, `objdump`, `strings`, `checksec`, `python3`
+**Required:** `gcc`, `gdb`, `objdump`, `strings`, `checksec`, `ltrace`, `python3`
 
 **Optional (exercises 02, 04):** Ghidra
 
@@ -40,6 +41,7 @@ gcc            -o crackme-01 crackme-01.c
 gcc            -o crackme-02 crackme-02.c
 gcc -g         -o crackme-03 crackme-03.c
 gcc -g -O0     -o crackme-04 crackme-04.c
+gcc            -o crackme-05 crackme-05.c
 ```
 
 `-g` embeds debug symbols so GDB can show function names.
@@ -55,7 +57,9 @@ gcc -g -O0     -o crackme-04 crackme-04.c
 | `crackme-02.c` | 02 — XOR Crackme |
 | `crackme-03.c` | 03 — Runtime Token |
 | `crackme-04.c` | 04 — Serial Validator |
+| `crackme-05.c` | 05 — ltrace Interception |
 | `solutions/solution-01.md` | Full walkthrough for exercise 01 |
 | `solutions/solution-02.md` | Full walkthrough for exercise 02 |
 | `solutions/solution-03.md` | Full walkthrough for exercise 03 |
 | `solutions/solution-04.md` | Full walkthrough for exercise 04 |
+| `solutions/solution-05.md` | Full walkthrough for exercise 05 |
