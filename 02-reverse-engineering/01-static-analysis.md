@@ -1,3 +1,75 @@
+# Reverse Engineering
+
+## What Is Reverse Engineering?
+
+Reverse engineering is the process of understanding how something works by examining it — without access to the original design or source code.
+
+In software security it means: **you have a compiled binary, you have no C source, and you need to figure out what it does.**
+
+The compiler turned human-readable C into machine code. Reverse engineering goes the other direction:
+
+```
+Source code  ──(compiler)──▶  Binary
+                              Binary  ──(you)──▶  Understanding
+```
+
+You are not perfectly recovering the source — variable names, comments, and structure are gone forever. What you recover is **behavior**: what the program computes, what it checks, what it sends, where the bugs are.
+
+---
+
+## Why Reverse Engineer?
+
+| Situation | Goal |
+|---|---|
+| CTF crackme | Find the input that makes it print "Correct" |
+| Malware analysis | Understand what a suspicious binary does without running it |
+| Vulnerability research | Find bugs in closed-source software |
+| Interoperability | Understand an undocumented protocol or file format |
+| Exploit development | Know exactly which code path you are hijacking |
+
+---
+
+## The Two Approaches
+
+Every reverse engineering session uses one or both of these:
+
+**Static analysis** — read the binary without running it. Safe, complete, but slower. You see all code paths, including ones that never trigger at runtime.
+
+**Dynamic analysis** — run the binary and observe it live. Faster for understanding behavior, but you only see what actually executes during that run.
+
+They complement each other. A typical session starts static (understand structure, find interesting functions) then goes dynamic (step through those functions in GDB to confirm your theory).
+
+---
+
+## What You Are Looking At
+
+When you open a binary in a disassembler, you see machine code — instructions the CPU executes directly. A decompiler (Ghidra, IDA) translates those instructions back into C-like pseudocode. Neither output is perfect, but both are readable with practice.
+
+```
+Binary bytes      Disassembly (objdump)     Decompiler (Ghidra)
+─────────────     ──────────────────────    ───────────────────
+55                push   rbp                int check_key(char *input) {
+48 89 e5          mov    rbp, rsp
+48 83 ec 10       sub    rsp, 0x10              char expected[] = {...};
+...               ...                           for (int i = 0; i < 5; i++)
+                                                    if ((input[i]^0x13) != expected[i])
+                                                        return 0;
+                                                return 1;
+                                            }
+```
+
+Disassembly is ground truth — every instruction is real. Decompiler output is a best guess — useful, but always verify against the assembly when it matters.
+
+---
+
+## Mental Model
+
+Think of a reverse engineer as a detective handed a finished jigsaw puzzle with no picture on the box. The pieces are the bytes. Static analysis is laying them all out and studying their shapes. Dynamic analysis is watching someone else assemble them in real time.
+
+Your goal is not to rebuild the box art. Your goal is to answer one specific question: **where is the weakness?**
+
+---
+
 # Static Analysis
 
 Static analysis means examining a binary **without running it**. You read the code, understand the structure, and reason about behavior purely from the file on disk.
