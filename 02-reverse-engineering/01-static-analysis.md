@@ -366,15 +366,14 @@ call printf
 
 ## Practical Example: Crackme
 
-A typical CTF reverse engineering challenge:
+A typical CTF reverse engineering challenge — you get a binary, no source code. You load it in Ghidra and the decompiler produces:
 
 ```c
-// Decompiler output:
 int main() {
     char buf[32];
     printf("Enter key: ");
     fgets(buf, 32, stdin);
-    buf[strcspn(buf, "\n")] = 0;   // remove newline
+    buf[strcspn(buf, "\n")] = 0;   // strip the newline fgets leaves
 
     if (check_key(buf) == 1) {
         puts("Correct!");
@@ -384,7 +383,6 @@ int main() {
 }
 
 int check_key(char *input) {
-    // XOR each byte with 0x13 and compare to hardcoded values
     char expected[] = {0x76, 0x60, 0x72, 0x60, 0x7b};
     for (int i = 0; i < 5; i++) {
         if ((input[i] ^ 0x13) != expected[i]) return 0;
@@ -393,12 +391,71 @@ int check_key(char *input) {
 }
 ```
 
-From this you can reverse the key:
+### Step 1 — Understand what the program does
+
+`main` reads a string from the user and passes it to `check_key`.
+`check_key` returns `1` (correct) or `0` (wrong).
+Your job: figure out which string makes `check_key` return `1`.
+
+### Step 2 — Read check_key carefully
+
+The loop condition is:
+
+```c
+if ((input[i] ^ 0x13) != expected[i]) return 0;
+```
+
+In plain English: *"XOR the i-th character of the input with 0x13. If it does not equal expected[i], reject it."*
+
+For the key to be accepted, **every** character must satisfy:
+
+```
+input[i] ^ 0x13  ==  expected[i]
+```
+
+### Step 3 — Use XOR's reversibility
+
+XOR has one crucial property: **it is its own inverse**.
+
+```
+If  A ^ B = C
+Then C ^ B = A          (XOR both sides by B again)
+```
+
+Applied here:
+
+```
+input[i] ^ 0x13 == expected[i]
+           ↓  XOR both sides with 0x13
+input[i]        == expected[i] ^ 0x13
+```
+
+So each input character is just the matching expected byte XOR-ed with 0x13. The key is already embedded in the binary — just XOR it out.
+
+### Step 4 — Reverse each byte by hand
+
+```
+index  expected   binary       ^ 0x13     binary       decimal  char
+  0     0x76    0111 0110   ^  0001 0011 = 0110 0101  = 101  =  'e'
+  1     0x60    0110 0000   ^  0001 0011 = 0111 0011  = 115  =  's'
+  2     0x72    0111 0010   ^  0001 0011 = 0110 0001  =  97  =  'a'
+  3     0x60    0110 0000   ^  0001 0011 = 0111 0011  = 115  =  's'
+  4     0x7b    0111 1011   ^  0001 0011 = 0110 1000  = 104  =  'h'
+```
+
+### Step 5 — Recover the key with Python
+
 ```python
 expected = [0x76, 0x60, 0x72, 0x60, 0x7b]
 key = ''.join(chr(b ^ 0x13) for b in expected)
-print(key)   # "esaw h" or whatever the XOR produces
+print(key)   # esash
 ```
+
+Run the binary and enter `esash` — it prints `Correct!`.
+
+### Why the author used XOR
+
+XOR obfuscation is the simplest way to hide a hardcoded string from `strings ./binary`. The raw bytes in the binary are `76 60 72 60 7b`, which are not printable ASCII, so a quick `strings` scan misses them. As soon as you spot the XOR loop in the decompiler and the constant `0x13`, the game is over — XOR is trivially reversible.
 
 ---
 
