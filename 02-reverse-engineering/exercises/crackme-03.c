@@ -17,6 +17,7 @@ int main(void) {
     build_token(token);
 
     printf("Token: ");
+    fflush(stdout);
     fgets(input, sizeof(input), stdin);
     input[strcspn(input, "\n")] = 0;
 
