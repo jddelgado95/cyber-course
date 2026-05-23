@@ -35,7 +35,8 @@ Stack layout inside `say_hello`:
 gcc -g -fno-stack-protector -no-pie -w -o program-vuln program-vuln.c
 ```
 
-- `-w` suppresses the compiler warning about `gets` being dangerous (expected here)
+- `-w` suppresses compiler warnings (expected here — `gets` is intentionally unsafe)
+- If you see `error: implicit declaration of function 'gets'`, the fix is already in `program-vuln.c` as a forward declaration; recompile and it will succeed
 
 ---
 

@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* gets() was removed from C11 headers but still exists in libc.
+   Forward-declare it so the compiler accepts it without an error. */
+extern char *gets(char *s);
+
 char greeting[] = "Hello!";
 
 void win() {
